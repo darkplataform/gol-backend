@@ -104,12 +104,26 @@ app.post("/boards", async (req: Request, res: Response): Promise<void> => {
 // GET /boards/:id
 app.get("/boards/:id", async (req: Request, res: Response): Promise<void> => {
   try {
-    const doc = await db.collection("boards").doc(req.params.id).get();
-    if (!doc.exists) {
+    const snap = await db.collection("boards").doc(req.params.id).get();
+    if (!snap.exists) {
       res.status(404).send("not_found");
       return;
     }
-    res.json({ id: doc.id, ...doc.data() });
+    const data = snap.data()!;
+    const rows = data.rows as number;
+    const cols = data.cols as number;
+    const generation = data.generation as number;
+    const status = data.status as string;
+    const aliveSet = toSetFromDocs((data.alive as AliveDocs) ?? []);
+
+    res.json({
+      id: snap.id,
+      rows,
+      cols,
+      generation,
+      alive: pairsFromSet(aliveSet),
+      status,
+    });
   } catch (e) {
     console.error(e);
     res.status(500).send("fetch_failed");
